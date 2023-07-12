@@ -1,0 +1,77 @@
+#!/bin/bash
+
+set -e
+
+# Path to the AWS credentials file
+CREDENTIALS_FILE="$HOME/.aws/credentials"
+
+# Updates or creates a profile
+update_or_create_profile() {
+  local profile_name="$1"
+  local key_id_var="$2"
+  local secret_key_var="$3"
+  local mfa_var="$4"
+  local session_token_var="$5"
+  local region="us-west-2"
+
+  if grep -q "^\[${profile_name}\]" "$CREDENTIALS_FILE"; then
+    # Update the existing profile
+    sed -i.bak \
+        -e "/\[${profile_name}\]/,/^\[.*\]/{s|\(aws_access_key_id *= *\).*|\1${!key_id_var}|;}" \
+        -e "/\[${profile_name}\]/,/^\[.*\]/{s|\(aws_secret_access_key *= *\).*|\1${!secret_key_var}|;}" \
+        -e "/\[${profile_name}\]/,/^\[.*\]/{s|\(region *= *\).*|\1${region}|;}" \
+        "$CREDENTIALS_FILE"
+
+    if [ -n "${mfa_var}" ]; then
+      sed -i.bak "/\[${profile_name}\]/,/^\[.*\]/{s|\(mfa_serial *= *\).*|\1${!mfa_var}|;}" "$CREDENTIALS_FILE"
+    fi
+
+    if [ -n "${session_token_var}" ]; then
+      sed -i.bak "/\[${profile_name}\]/,/^\[.*\]/{s|\(aws_session_token *= *\).*|\1${!session_token_var}|;}" "$CREDENTIALS_FILE"
+    fi
+  else
+    # Create a new profile
+    {
+      # Add an empty lines before the new profile
+      echo ""
+      echo ""
+      echo "[${profile_name}]"
+      echo "aws_access_key_id = ${!key_id_var}"
+      echo "aws_secret_access_key = ${!secret_key_var}"
+      if [ -n "${mfa_var}" ]; then
+        echo "mfa_serial = ${!mfa_var}"
+      fi
+      if [ -n "${session_token_var}" ]; then
+        echo "aws_session_token = ${!session_token_var}"
+      fi
+      echo "region = ${region}"
+    } >> "$CREDENTIALS_FILE"
+  fi
+
+  # Remove the backup file created by sed
+  rm -f "${CREDENTIALS_FILE}.bak"
+}
+
+###
+# Main
+###
+
+FILE="$HOME/.aws/credentials"
+
+USER_AWS_ACCESS_KEY_ID=$(grep -A3 '\[main\]' "$FILE" | grep 'aws_access_key_id' | awk -F'=' '{print $2}' | tr -d '[:space:]')
+USER_AWS_SECRET_ACCESS_KEY=$(grep -A3 '\[main\]' "$FILE" | grep 'aws_secret_access_key' | awk -F'=' '{print $2}' | tr -d '[:space:]')
+USER_MFA_SERIAL=$(grep -A3 '\[main\]' "$FILE" | grep 'mfa_serial' | awk -F'=' '{print $2}' | tr -d '[:space:]')
+
+mfaCode="$1"
+
+response=$(aws sts get-session-token --serial-number "$USER_MFA_SERIAL" --token-code "$mfaCode" --profile=main --duration-seconds=86400)
+
+AWS_ACCESS_KEY_ID=$(echo "$response" | jq -r '.Credentials.AccessKeyId')
+AWS_SECRET_ACCESS_KEY=$(echo "$response" | jq -r '.Credentials.SecretAccessKey')
+AWS_SESSION_TOKEN=$(echo "$response" | jq -r '.Credentials.SessionToken')
+
+# Call the function to update or create the 'default' and 'main' profiles
+update_or_create_profile "default" "AWS_ACCESS_KEY_ID" "AWS_SECRET_ACCESS_KEY" "" "AWS_SESSION_TOKEN"
+update_or_create_profile "main" "USER_AWS_ACCESS_KEY_ID" "USER_AWS_SECRET_ACCESS_KEY" "USER_MFA_SERIAL" ""
+
+echo "Successfully logged in."
