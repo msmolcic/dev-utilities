@@ -37,15 +37,15 @@ This setup provides access to custom shell functions that significantly speed up
 
 ## AWS Credentials Functions
 
-### `aws-mfa <profileName>`
-This function handles MFA for your AWS profiles. The `<profileName>` parameter is optional and defaults to "main" if not provided.
+### `aws-mfa <profile_name>`
+This function handles MFA for your AWS profiles. The `<profile_name>` parameter is optional and defaults to "main" if not provided.
 
 For this function to work correctly, make sure you have a profile defined in your `~/.aws/credentials` file and the corresponding configuration in your `~/.aws/config` file:
 
 `~/.aws/credentials`
 
 ```bash
-[profileName]
+[profile_name]
 aws_access_key_id=${USER_AWS_ACCESS_KEY_ID}
 aws_secret_access_key=${USER_AWS_SECRET_ACCESS_KEY}
 ```
@@ -53,12 +53,12 @@ aws_secret_access_key=${USER_AWS_SECRET_ACCESS_KEY}
 `~/.aws/config`
 
 ```bash
-[profile profileName]
+[profile profile_name]
 region=us-west-2
 mfa_serial=${USER_MFA_SERIAL}
 ```
 
-Replace `profileName` with the name of your profile. If you use "main" as the profile name, that will be the default profile used by `aws-mfa` when no profile is specified.
+Replace `profile_name` with the name of your profile. If you use "main" as the profile name, that will be the default profile used by `aws-mfa` when no profile is specified.
 
 The `mfa_serial` value is the ARN of your MFA, e.g. `arn:aws:iam::123456789:mfa/mobile`.
 
