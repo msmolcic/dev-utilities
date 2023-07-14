@@ -1,25 +1,28 @@
+[![License](https://img.shields.io/badge/license-MIT-green)](https://github.com/YourGithubUsername/YourRepositoryName/blob/main/LICENSE)
+[![Linkedin](https://img.shields.io/badge/-LinkedIn-blue?style=flat-square&logo=Linkedin&logoColor=white&link=https://www.linkedin.com/in/yourusername)](https://www.linkedin.com/in/msmolcic/)
+[![Twitter Follow](https://img.shields.io/twitter/follow/MarioSmolcic?style=social)](https://twitter.com/MarioSmolcic)
+
 # Dev Utilities
 
-Set of utility functions to make dev life easier.
+This repository is a collection of utility functions designed to streamline development workflows. The shell functions are particularly useful for developers using AWS services, as they facilitate operations such as AWS Multi-Factor Authentication (MFA).
 
-## Shell functions
+## Prerequisites
 
-Before you start, make sure that you have latest version of [AWS CLI](https://docs.aws.amazon.com/cli/latest/userguide/getting-started-install.html) installed on your machine.
+- Make sure that you have the latest version of the [AWS CLI](https://docs.aws.amazon.com/cli/latest/userguide/getting-started-install.html) installed on your machine.
+- [jq](https://stedolan.github.io/jq/) should also be installed and accessible in your environment path.
+- For Windows users, [GitBash](https://gitforwindows.org/) needs to be installed.
+- A valid AWS MFA setup for your account is necessary for some functions.
 
-##### Windows users
+## Getting Started
 
-You'll also need to make sure that you have [GitBash](https://gitforwindows.org/) installed, and that [jq](https://stedolan.github.io/jq/) is accessible at your environment path and is a known command in your system.
+To integrate these utilities into your workflow, add the following to your shell's startup file, which could be `~/.bashrc`, `~/.zshrc`, or equivalent depending on your environment:
 
-## Getting started
-
-CLI access is best managed by adding the following to the user’s `~/.bashrc` or `~/.zshrc` (or whatever you use):
-
-```
+```bash
 # Set as appropriate for your environment
 export DEV_UTIL_GIT_ROOT="$HOME/git"
 
 if ! [ -d "$DEV_UTIL_GIT_ROOT/dev-utilities" ]; then
-  # GitHub access should already be configured.
+  # Ensure your GitHub access is configured.
   git clone git@github.com:msmolcic/dev-utilities.git "$DEV_UTIL_GIT_ROOT"/dev-utilities
 fi
 
@@ -30,24 +33,39 @@ for f in "$DEV_UTIL_GIT_ROOT"/dev-utilities/shell-functions/*.sh; do
 done
 ```
 
-When a new tab is started, it will have access to custom shell functions that allow the user to do various things much faster using the set of custom commands.
+This setup provides access to custom shell functions that significantly speed up common tasks.
 
 ## AWS Credentials Functions
 
-### `aws-mfa`
+### `aws-mfa <profileName>`
+This function handles MFA for your AWS profiles. The `<profileName>` parameter is optional and defaults to "main" if not provided.
 
-To make this function work, make sure you have the following profile definition in your `~/.aws/credentials` file with actual values instead of the placeholders:
+For this function to work correctly, make sure you have a profile defined in your `~/.aws/credentials` file and the corresponding configuration in your `~/.aws/config` file:
 
-```
-[main]
+`~/.aws/credentials`
+
+```bash
+[profileName]
 aws_access_key_id=${USER_AWS_ACCESS_KEY_ID}
 aws_secret_access_key=${USER_AWS_SECRET_ACCESS_KEY}
-mfa_serial=${USER_MFA_SERIAL}
-region=us-west-2
 ```
 
-Profile name `[main]` is really important factor, because some of the main logic revolves around that name (no pun intended).
+`~/.aws/config`
 
-`mfa_serial` is the ARN value of your MFA, e.g. `arn:aws:iam::123456789:mfa/mobile`.
+```bash
+[profile profileName]
+region=us-west-2
+mfa_serial=${USER_MFA_SERIAL}
+```
 
-This function is implemented on and mostly hide underlying aws session token functionality. When invoked you'll be asked to enter your MFA code. Upon successful login, temporary access token data is stored under the default profile in your `~/.aws/credentials` file and should allow you to execute follow up commands against AWS environments. These credentials are temporary and last for 24 hours.
+Replace `profileName` with the name of your profile. If you use "main" as the profile name, that will be the default profile used by `aws-mfa` when no profile is specified.
+
+The `mfa_serial` value is the ARN of your MFA, e.g. `arn:aws:iam::123456789:mfa/mobile`.
+
+When invoked, `aws-mfa` prompts you to enter your MFA code. Upon successful login, temporary access token data is stored under the 'default' profile in your `~/.aws/credentials` file, enabling you to execute follow-up commands against AWS environments. Note that these credentials are temporary and last for 24 hours.
+
+## Warning
+These scripts directly modify the `~/.aws/credentials` file. Ensure to keep a backup of your AWS credentials before using these scripts.
+
+## Contributing
+Pull requests are welcome. For major changes, please open an issue first to discuss what you would like to change.
